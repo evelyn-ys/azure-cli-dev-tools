@@ -159,6 +159,14 @@ helps['linter'] = """
           text: azdev linter --repo azure-cli --tgt upstream/master --src upstream/dev
 """
 
+helps['scan'] = """
+    short-summary: Scan secrets for files
+"""
+
+helps['mask'] = """
+    short-summary: Mask secrets for files
+"""
+
 helps['statistics'] = """
     short-summary: Commands for CLI modules statistics.
 """
