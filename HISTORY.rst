@@ -2,6 +2,10 @@
 
 Release History
 ===============
+0.1.72
+++++++
+* `azdev scan/mask`: New commands for scanning and masking secrets for files or string
+
 0.1.71
 ++++++
 * `azdev extension show`: Show detailed extension info that installed in your development environment.

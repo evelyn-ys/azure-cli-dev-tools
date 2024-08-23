@@ -115,8 +115,8 @@ def load_arguments(self, _):
             c.argument('scan_result_path', options_list=['--scan-result-path', '--result'],
                        help='Path for the file you want to save the result in')
             c.argument('custom_pattern',
-                       help='Additional patterns you want to apply for scanning rules. '
-                            'Can be json string or path to the json file')
+                       help='Additional patterns you want to apply or built-in patterns you want to exclude '
+                            'for scanning. Can be json string or path to the json file.')
 
     with ArgumentsContext(self, 'mask') as c:
         c.argument('yes', options_list=['--yes', '-y'], action='store_true', help='Answer "yes" to all prompts.')

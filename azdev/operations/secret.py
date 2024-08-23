@@ -7,7 +7,9 @@
 import os
 import json
 from knack.log import get_logger
-from microsoft_security_utilities_secret_masker import load_regex_patterns_from_json_file, SecretMasker
+from microsoft_security_utilities_secret_masker import (load_regex_patterns_from_json_file,
+                                                        load_regex_pattern_from_json,
+                                                        SecretMasker)
 logger = get_logger(__name__)
 
 
@@ -27,14 +29,46 @@ def _validate_data_path(file_path=None, directory_path=None, data=None):
         raise ValueError(f'invalid file path:{file_path}')
 
 
+def _load_built_in_regex_patterns():
+    return load_regex_patterns_from_json_file('PreciselyClassifiedSecurityKeys.json')
+
+
+def _load_regex_patterns(custom_pattern=None):
+    built_in_regex_patterns = _load_built_in_regex_patterns()
+
+    if not custom_pattern:
+        return built_in_regex_patterns
+    if os.path.isfile(custom_pattern):
+        custom_pattern = json.load(custom_pattern)
+    else:
+        custom_pattern = json.loads(custom_pattern)
+
+    regex_patterns = []
+    if 'Include' in custom_pattern:
+        for pattern in custom_pattern['Include']:
+            if not pattern.get('Pattern', None):
+                raise ValueError(f'Invalid Custom Pattern: {pattern}, "Pattern" property is required for Include patterns')
+            regex_patterns.append(load_regex_pattern_from_json(pattern))
+    if "Exclude" in custom_pattern:
+        exclude_pattern_ids = []
+        for pattern in custom_pattern['Exclude']:
+            if not pattern.get('Id', None):
+                raise ValueError(f'Invalid Custom Pattern: {pattern}, "Id" property is required for Exclude patterns')
+            exclude_pattern_ids.append(pattern['Id'])
+        for pattern in built_in_regex_patterns:
+            if pattern.id in exclude_pattern_ids:
+                continue
+            regex_patterns.append(pattern)
+    else:
+        regex_patterns.extend(built_in_regex_patterns)
+    return regex_patterns
+
+
 def _scan_secrets_for_string(data, custom_pattern=None):
     if not data:
         return None
-    regex_patterns = load_regex_patterns_from_json_file('PreciselyClassifiedSecurityKeys.json')
-    if custom_pattern:
-        if os.path.isfile(custom_pattern):
-            custom_pattern = json.load(custom_pattern)
-        regex_patterns = regex_patterns.union(custom_pattern)
+
+    regex_patterns = _load_regex_patterns(custom_pattern)
     secret_masker = SecretMasker(regex_patterns)
     detected_secrets = secret_masker.detect_secrets(data)
     secrets = []
@@ -42,7 +76,8 @@ def _scan_secrets_for_string(data, custom_pattern=None):
         secrets.append({
             'secret_name': secret.name,
             'secret_value': data[secret.start:secret.end],
-            'redaction_token': secret.redaction_token
+            'secret_index': [secret.start, secret.end],
+            'redaction_token': secret.redaction_token,
         })
     return secrets
 
@@ -82,6 +117,8 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False, data=None
             if secrets:
                 scan_results[target_file] = secrets
 
+    if scan_result_path:
+        save_scan_result = True
     if not save_scan_result:
         return {
             'secrets_detected': True if scan_results else False,
