@@ -2,9 +2,18 @@
 
 Release History
 ===============
-0.1.72
+0.1.74
 ++++++
 * `azdev scan/mask`: New commands for scanning and masking secrets for files or string
+
+0.1.73
+++++++
+* `azdev command-change meta-export`: Add `has_completer` to denote whether completer is configed in arg
+* `azdev command-change meta-export`: Extracting arg help and example for loaded HelpFiles
+
+0.1.72
+++++++
+* Bump `pylint` to 3
 
 0.1.71
 ++++++
