@@ -9,6 +9,7 @@ from knack.commands import CommandGroup
 from .transformers import performance_benchmark_data_transformer
 
 
+# pylint: disable=too-many-statements
 def load_command_table(self, _):
 
     def operation_group(name):

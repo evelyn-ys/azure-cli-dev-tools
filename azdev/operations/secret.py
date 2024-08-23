@@ -47,7 +47,8 @@ def _load_regex_patterns(custom_pattern=None):
     if 'Include' in custom_pattern:
         for pattern in custom_pattern['Include']:
             if not pattern.get('Pattern', None):
-                raise ValueError(f'Invalid Custom Pattern: {pattern}, "Pattern" property is required for Include patterns')
+                raise ValueError(f'Invalid Custom Pattern: {pattern}, '
+                                 f'"Pattern" property is required for Include patterns')
             regex_patterns.append(load_regex_pattern_from_json(pattern))
     if "Exclude" in custom_pattern:
         exclude_pattern_ids = []
@@ -90,7 +91,7 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False, data=None
     if directory_path:
         directory_path = os.path.abspath(directory_path)
         if recursive:
-            for root, dirs, files in os.walk(directory_path):
+            for root, _, files in os.walk(directory_path):
                 target_files.extend(os.path.join(root, file) for file in files)
         else:
             for file in os.listdir(directory_path):
@@ -107,13 +108,13 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False, data=None
             scan_results['raw_data'] = secrets
     elif target_files:
         for target_file in target_files:
-            logger.debug(f'start scanning secrets for {target_file}')
+            logger.debug('start scanning secrets for %s', target_file)
             with open(target_file) as f:
                 data = f.read()
             if not data:
                 continue
             secrets = _scan_secrets_for_string(data, custom_pattern)
-            logger.debug(f'{len(secrets)} secrets found for {target_file}')
+            logger.debug('%d secrets found for %s', len(secrets), target_file)
             if secrets:
                 scan_results[target_file] = secrets
 
@@ -121,7 +122,7 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False, data=None
         save_scan_result = True
     if not save_scan_result:
         return {
-            'secrets_detected': True if scan_results else False,
+            'secrets_detected': bool(scan_results),
             'scan_results': scan_results
         }
 
@@ -140,8 +141,39 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False, data=None
 
     with open(scan_result_path, 'w') as f:
         json.dump(scan_results, f)
-        logger.debug(f'store scanning results in {scan_result_path}')
+        logger.debug('store scanning results in %s', scan_result_path)
     return {'secrets_detected': True, 'scan_result_path': os.path.abspath(scan_result_path)}
+
+
+def _get_scan_results_from_saved_file(saved_scan_result_path,
+                                      file_path=None, directory_path=None, recursive=False, data=None):
+    scan_results = {}
+    if not os.path.isfile(saved_scan_result_path):
+        raise ValueError(f'invalid saved scan result path:{saved_scan_result_path}')
+    with open(saved_scan_result_path) as f:
+        saved_scan_results = json.load(f)
+    # filter saved scan results to keep those related with specified file(s)
+    _validate_data_path(file_path=file_path, directory_path=directory_path, data=data)
+    if file_path:
+        file_path = os.path.abspath(file_path)
+        if file_path in saved_scan_results:
+            scan_results[file_path] = saved_scan_results[file_path]
+    elif directory_path:
+        if recursive:
+            for root, _, files in os.walk(directory_path):
+                for file in files:
+                    file_full = os.path.join(root, file)
+                    if file_full in saved_scan_results:
+                        scan_results[file_full] = saved_scan_results[file_full]
+        else:
+            for file in os.listdir(directory_path):
+                file_full = os.path.join(directory_path, file)
+                if file_full in saved_scan_results:
+                    scan_results[file_full] = saved_scan_results[file_full]
+    else:
+        scan_results['raw_data'] = saved_scan_results['raw_data']
+
+    return scan_results
 
 
 def _mask_secret_for_string(data, secret, redaction_type=None):
@@ -161,30 +193,8 @@ def mask_secrets(file_path=None, directory_path=None, recursive=False, data=None
                  saved_scan_result_path=None, redaction_type='FIXED_VALUE', yes=None):
     scan_results = {}
     if saved_scan_result_path:
-        if not os.path.isfile(saved_scan_result_path):
-            raise ValueError(f'invalid saved scan result path:{saved_scan_result_path}')
-        with open(saved_scan_result_path) as f:
-            saved_scan_results = json.load(f)
-        # filter saved scan results to keep those related with specified file(s)
-        _validate_data_path(file_path=file_path, directory_path=directory_path, data=data)
-        if file_path:
-            file_path = os.path.abspath(file_path)
-            if file_path in saved_scan_results:
-                scan_results[file_path] = saved_scan_results[file_path]
-        elif directory_path:
-            if recursive:
-                for root, dirs, files in os.walk(directory_path):
-                    for file in files:
-                        file_full = os.path.join(root, file)
-                        if file_full in saved_scan_results:
-                            scan_results[file_full] = saved_scan_results[file_full]
-            else:
-                for file in os.listdir(directory_path):
-                    file_full = os.path.join(directory_path, file)
-                    if file_full in saved_scan_results:
-                        scan_results[file_full] = saved_scan_results[file_full]
-        else:
-            scan_results['raw_data'] = saved_scan_results['raw_data']
+        scan_results = _get_scan_results_from_saved_file(saved_scan_result_path, file_path=file_path,
+                                                         directory_path=directory_path, recursive=recursive, data=data)
     else:
         scan_response = scan_secrets(file_path=file_path, directory_path=directory_path, recursive=recursive, data=data,
                                      save_scan_result=save_scan_result, scan_result_path=scan_result_path,
@@ -195,28 +205,38 @@ def mask_secrets(file_path=None, directory_path=None, recursive=False, data=None
         elif not save_scan_result:
             scan_results = scan_response['scan_results']
 
+    mask_result = {
+            'mask': False,
+            'data': data,
+            'file_path': file_path,
+            'directory_path': directory_path,
+            'recursive': recursive
+    }
     if not scan_results:
         logger.warning('No secrets detected, finish directly.')
-        return
-    for file_path, secrets in scan_results.items():
-        logger.warning(f'Will mask {len(secrets)} secrets for {file_path}')
+        return mask_result
+    for scan_file_path, secrets in scan_results.items():
+        logger.warning('Will mask %d secrets for %s', len(secrets), scan_file_path)
     if not yes:
         from knack.prompting import prompt_y_n
         if not prompt_y_n(f'Do you want to continue with redaction type {redaction_type}?'):
-            return
+            return mask_result
 
     if 'raw_data' in scan_results:
         for secret in scan_results['raw_data']:
             data = _mask_secret_for_string(data, secret, redaction_type)
-        return data
+        mask_result['mask'] = True
+        mask_result['data'] = data
+        return mask_result
 
-    for file_path, secrets in scan_results.items():
-        with open(file_path, 'r') as f:
+    for scan_file_path, secrets in scan_results.items():
+        with open(scan_file_path, 'r') as f:
             content = f.read()
         if not content:
             continue
         for secret in secrets:
             content = _mask_secret_for_string(content, secret, redaction_type)
-        with open(file_path, 'w') as f:
+        with open(scan_file_path, 'w') as f:
             f.write(content)
-
+    mask_result['mask'] = True
+    return mask_result

@@ -3,15 +3,17 @@
 # Licensed under the MIT License. See License.txt in the project root for
 # license information.
 # -----------------------------------------------------------------------------
+
 import os
 import json
 import tempfile
 import unittest
 from unittest import mock
 
+from microsoft_security_utilities_secret_masker import RegexPattern
 from azdev.operations.secret import scan_secrets, mask_secrets
 from azdev.utilities.config import get_azdev_config_dir
-from microsoft_security_utilities_secret_masker import RegexPattern
+# pylint: disable=line-too-long, anomalous-backslash-in-string
 
 
 class TestScanAndMaskSecrets(unittest.TestCase):
@@ -32,7 +34,7 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         self.assertEqual(len(result['scan_results']['raw_data']), 1)
         self.assertEqual(result['scan_results']['raw_data'][0]['secret_name'], 'AdditionalPattern')
 
-        regex_pattern1 = RegexPattern('(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*\.[a-z]{2,})', '000', 'EmailAddress')
+        regex_pattern1 = RegexPattern(r'(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*.[a-z]{2,})', '000', 'EmailAddress')
         regex_pattern2 = RegexPattern('(?i)(?:^|[?;&])(?:dsas_secret|sig)=(?<refine>[0-9a-z\\/+%]{43,129}(?:=|%3d))', '001', 'LooseSasSecret')
         with mock.patch("azdev.operations.secret._load_built_in_regex_patterns", return_value=(regex_pattern1, regex_pattern2)):
             test_data2 = "This is a test string with email fooabc@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D"
@@ -116,7 +118,7 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         custom_pattern = {
             "Include": [
                 {
-                    "Pattern": "(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*\.[a-z]{2,})",
+                    "Pattern": r"(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*.[a-z]{2,})",
                     "Name": "EmailAddress"
                 }
             ]
@@ -137,7 +139,7 @@ class TestScanAndMaskSecrets(unittest.TestCase):
     def test_mask(self):
         test_data = "This is a test string with email fooabc@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D"
         result = mask_secrets(data=test_data, yes=True)
-        self.assertIsNone(result)
+        self.assertFalse(result['mask'])
         custom_pattern = {
             "Include": [
                 {
@@ -151,16 +153,16 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         try:
             result = mask_secrets(data=test_data, custom_pattern=json.dumps(custom_pattern), save_scan_result=True, scan_result_path=scan_result_path, yes=True)
             self.assertTrue(os.path.exists(scan_result_path))
-            self.assertEqual(result, 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, yes=True)
-            self.assertEqual(result, 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, redaction_type='FIXED_LENGTH', yes=True)
-            self.assertEqual(result, 'This is a test string with email ++++++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email ++++++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, redaction_type='SECRET_NAME', yes=True)
-            self.assertEqual(result, 'This is a test string with email EmailAddress@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email EmailAddress@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
         finally:
             if os.path.exists(scan_result_path):
                 os.remove(scan_result_path)

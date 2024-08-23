@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 from knack.help_files import helps
+# pylint: disable=line-too-long, anomalous-backslash-in-string
 
 
 helps[''] = """
@@ -170,7 +171,7 @@ helps['scan'] = """
                 {
                     "Include": [
                         {
-                            "Pattern": "(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*\.[a-z]{2,})",
+                            "Pattern": "(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*.[a-z]{2,})",
                             "Name": "EmailAddress",
                             "Signatures": ["%40", "@"]
                         },
