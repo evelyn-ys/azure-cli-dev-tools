@@ -13,9 +13,9 @@ from unittest import mock
 from microsoft_security_utilities_secret_masker import RegexPattern
 from azdev.operations.secret import scan_secrets, mask_secrets
 from azdev.utilities.config import get_azdev_config_dir
+
+
 # pylint: disable=line-too-long, anomalous-backslash-in-string
-
-
 class TestScanAndMaskSecrets(unittest.TestCase):
     def test_scan_raw_string(self):
         test_data = "This is a test string without any secrets."
@@ -86,7 +86,7 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         self.assertEqual(len(result['scan_results'][simple_string_file]), 1)
         self.assertEqual(result['scan_results'][simple_string_file][0]['secret_name'], 'AdditionalPattern')
 
-        regex_pattern1 = RegexPattern('(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*\.[a-z]{2,})', '000', 'EmailAddress')
+        regex_pattern1 = RegexPattern('(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*.[a-z]{2,})', '000', 'EmailAddress')
         regex_pattern2 = RegexPattern('(?i)(?:^|[?;&])(?:dsas_secret|sig)=(?<refine>[0-9a-z\\/+%]{43,129}(?:=|%3d))', '001', 'LooseSasSecret')
         with mock.patch("azdev.operations.secret._load_built_in_regex_patterns", return_value=(regex_pattern1, regex_pattern2)):
             result = scan_secrets(file_path=info_json_file)
@@ -143,7 +143,7 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         custom_pattern = {
             "Include": [
                 {
-                    "Pattern": "(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*\.[a-z]{2,})",
+                    "Pattern": "(?<refine>[\w.%#+-]+)(%40|@)([a-z0-9.-]*.[a-z]{2,})",
                     "Name": "EmailAddress"
                 }
             ]
