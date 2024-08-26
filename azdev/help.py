@@ -198,8 +198,8 @@ helps['scan'] = """
 helps['mask'] = """
     short-summary: Mask secrets for files or string
     long-summary: |
-                Redaction type 'FIXED_VALUE' will mask all secrets with '+++'.
-                Redaction type 'FIXED_LENGTH' will mask secrets with several '+'s which will keep the original secret length.
+                Redaction type 'FIXED_VALUE' will mask all secrets with '***'.
+                Redaction type 'FIXED_LENGTH' will mask secrets with several '*'s which will keep the original secret length.
                 Redaction type 'SECRET_NAME' redaction type will mask secrets with their secret name (type).
                 Redaction type 'CUSTOM' will mask secrets with 'redaction_token' value you specify through saved scan result file.
                 Check built-in scanning rules at https://github.com/microsoft/security-utilities/blob/main/GeneratedRegexPatterns/PreciselyClassifiedSecurityKeys.json

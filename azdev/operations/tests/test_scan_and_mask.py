@@ -153,13 +153,13 @@ class TestScanAndMaskSecrets(unittest.TestCase):
         try:
             result = mask_secrets(data=test_data, custom_pattern=json.dumps(custom_pattern), save_scan_result=True, scan_result_path=scan_result_path, yes=True)
             self.assertTrue(os.path.exists(scan_result_path))
-            self.assertEqual(result['data'], 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email ***@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, yes=True)
-            self.assertEqual(result['data'], 'This is a test string with email +++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email ***@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, redaction_type='FIXED_LENGTH', yes=True)
-            self.assertEqual(result['data'], 'This is a test string with email ++++++@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
+            self.assertEqual(result['data'], 'This is a test string with email ******@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')
 
             result = mask_secrets(data=test_data, saved_scan_result_path=scan_result_path, redaction_type='SECRET_NAME', yes=True)
             self.assertEqual(result['data'], 'This is a test string with email EmailAddress@gmail.com and sas sv=2022-11-02&sr=c&sig=a9Y5mpQgKUiiPzHFNdDm53Na6UndTrNMCsRZd6b2oV4%3D')

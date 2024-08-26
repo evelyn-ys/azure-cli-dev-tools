@@ -6,6 +6,7 @@
 
 import os
 import json
+from json.decoder import JSONDecodeError
 from knack.log import get_logger
 from microsoft_security_utilities_secret_masker import (load_regex_patterns_from_json_file,
                                                         load_regex_pattern_from_json,
@@ -21,7 +22,7 @@ def _validate_data_path(file_path=None, directory_path=None, data=None):
     if directory_path and data:
         raise ValueError('Can not specify directory path and raw string at the same time')
     if not file_path and not directory_path and not data:
-        raise ValueError('No file path ot directory path or raw string provided')
+        raise ValueError('No file path or directory path or raw string provided')
 
     if directory_path and not os.path.isdir(directory_path):
         raise ValueError(f'invalid directory path:{directory_path}')
@@ -38,10 +39,14 @@ def _load_regex_patterns(custom_pattern=None):
 
     if not custom_pattern:
         return built_in_regex_patterns
-    if os.path.isfile(custom_pattern):
-        custom_pattern = json.load(custom_pattern)
-    else:
-        custom_pattern = json.loads(custom_pattern)
+
+    try:
+        if os.path.isfile(custom_pattern):
+            custom_pattern = json.load(custom_pattern)
+        else:
+            custom_pattern = json.loads(custom_pattern)
+    except JSONDecodeError as err:
+        raise ValueError(f'Custom pattern should be in valid json format, err:{err.msg}')
 
     regex_patterns = []
     if 'Include' in custom_pattern:
@@ -178,9 +183,9 @@ def _get_scan_results_from_saved_file(saved_scan_result_path,
 
 def _mask_secret_for_string(data, secret, redaction_type=None):
     if redaction_type == 'FIXED_VALUE':
-        data = data.replace(secret['secret_value'], '+++')
+        data = data.replace(secret['secret_value'], '***')
     elif redaction_type == 'FIXED_LENGTH':
-        data = data.replace(secret['secret_value'], '+' * len(secret['secret_value']))
+        data = data.replace(secret['secret_value'], '*' * len(secret['secret_value']))
     elif redaction_type == 'SECRET_NAME':
         data = data.replace(secret['secret_value'], secret['secret_name'])
     else:
