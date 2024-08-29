@@ -54,6 +54,27 @@ def _check_file_include_and_exclude_pattern(filename, include_pattern=None, excl
         file_satisfied = False
     return file_satisfied
 
+
+def _get_files_from_directory(directory_path, recursive=None, include_pattern=None, exclude_pattern=None):
+    target_files = []
+    if recursive:
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                if _check_file_include_and_exclude_pattern(file,
+                                                           include_pattern=include_pattern,
+                                                           exclude_pattern=exclude_pattern):
+                    target_files.append(os.path.join(root, file))
+    else:
+        for file in os.listdir(directory_path):
+            if _check_file_include_and_exclude_pattern(file,
+                                                       include_pattern=include_pattern,
+                                                       exclude_pattern=exclude_pattern):
+                file = os.path.join(directory_path, file)
+                if os.path.isfile(file):
+                    target_files.append(file)
+    return target_files
+
+
 def _load_built_in_regex_patterns():
     return load_regex_patterns_from_json_file('PreciselyClassifiedSecurityKeys.json')
 
@@ -121,21 +142,8 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False,
     scan_results = {}
     if directory_path:
         directory_path = os.path.abspath(directory_path)
-        if recursive:
-            for root, _, files in os.walk(directory_path):
-                for file in files:
-                    if _check_file_include_and_exclude_pattern(file,
-                                                               include_pattern=include_pattern,
-                                                               exclude_pattern=exclude_pattern):
-                        target_files.append(os.path.join(root, file))
-        else:
-            for file in os.listdir(directory_path):
-                if _check_file_include_and_exclude_pattern(file,
-                                                           include_pattern=include_pattern,
-                                                           exclude_pattern=exclude_pattern):
-                    file = os.path.join(directory_path, file)
-                    if os.path.isfile(file):
-                        target_files.append(file)
+        target_files = _get_files_from_directory(directory_path, recursive=recursive,
+                                                 include_pattern=include_pattern, exclude_pattern=exclude_pattern)
     if file_path:
         file_path = os.path.abspath(file_path)
         target_files.append(file_path)
@@ -191,27 +199,19 @@ def _get_scan_results_from_saved_file(saved_scan_result_path,
     with open(saved_scan_result_path, encoding='utf8') as f:
         saved_scan_results = json.load(f)
     # filter saved scan results to keep those related with specified file(s)
-    _validate_data_path(file_path=file_path, directory_path=directory_path, include_pattern=include_pattern, exclude_pattern=exclude_pattern, data=data)
+    _validate_data_path(file_path=file_path, directory_path=directory_path,
+                        include_pattern=include_pattern, exclude_pattern=exclude_pattern, data=data)
     if file_path:
         file_path = os.path.abspath(file_path)
         if file_path in saved_scan_results:
             scan_results[file_path] = saved_scan_results[file_path]
     elif directory_path:
-        if recursive:
-            for root, _, files in os.walk(directory_path):
-                for file in files:
-                    if _check_file_include_and_exclude_pattern(file,
-                                                               include_pattern=include_pattern,
-                                                               exclude_pattern=exclude_pattern):
-                        file_full = os.path.join(root, file)
-                        if file_full in saved_scan_results:
-                            scan_results[file_full] = saved_scan_results[file_full]
-        else:
-            for file in os.listdir(directory_path):
-                if _check_file_include_and_exclude_pattern(file, include_pattern=include_pattern, exclude_pattern=exclude_pattern):
-                    file_full = os.path.join(directory_path, file)
-                    if file_full in saved_scan_results:
-                        scan_results[file_full] = saved_scan_results[file_full]
+        directory_path = os.path.abspath(directory_path)
+        target_files = _get_files_from_directory(directory_path, recursive=recursive,
+                                                 include_pattern=include_pattern, exclude_pattern=exclude_pattern)
+        for target_file in target_files:
+            if target_file in saved_scan_results:
+                scan_results[target_file] = saved_scan_results[target_file]
     else:
         scan_results['raw_data'] = saved_scan_results['raw_data']
 
