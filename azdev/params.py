@@ -112,11 +112,11 @@ def load_arguments(self, _):
             c.argument('include_pattern', options_list=['--include-pattern', '--include'], nargs='*',
                        help="Space separated patterns used for files you want to include within the directory. "
                             "The supported patterns are '*', '?', '[seq]', and '[!seq]'. "
-                            "For more information, please refer to https://docs.python.org/3.7/library/fnmatch.html")
+                            "For more information, please refer to https://docs.python.org/3/library/fnmatch.html")
             c.argument('exclude_pattern', options_list=['--exclude-pattern', '--exclude'], nargs='*',
                        help="Space separated patterns used for files you want to exclude within the directory. "
                             "The supported patterns are '*', '?', '[seq]', and '[!seq]'. "
-                            "For more information, please refer to https://docs.python.org/3.7/library/fnmatch.html")
+                            "For more information, please refer to https://docs.python.org/3/library/fnmatch.html")
             c.argument('data', help='Raw string you want to scan secrets for')
             c.argument('save_scan_result', options_list=['--save-scan-result', '--save'], action='store_true',
                        help='Whether to save scan result to file or not')
