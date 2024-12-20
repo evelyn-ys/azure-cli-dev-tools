@@ -176,7 +176,7 @@ def scan_secrets(file_path=None, directory_path=None, recursive=False,
                 logger.debug('%d secrets found for %s', len(secrets), target_file)
                 if secrets:
                     scan_results[target_file] = secrets
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-exception-caught
                 if continue_on_failure:
                     logger.warning("Error handling file %s, exception %s", target_file, str(ex))
                 else:
@@ -266,7 +266,8 @@ def mask_secrets(file_path=None, directory_path=None, recursive=False,
         scan_response = scan_secrets(file_path=file_path, directory_path=directory_path, recursive=recursive,
                                      include_pattern=include_pattern, exclude_pattern=exclude_pattern, data=data,
                                      save_scan_result=save_scan_result, scan_result_path=scan_result_path,
-                                     confidence_level=confidence_level, custom_pattern=custom_pattern, continue_on_failure=continue_on_failure)
+                                     confidence_level=confidence_level, custom_pattern=custom_pattern,
+                                     continue_on_failure=continue_on_failure)
         if save_scan_result and scan_response['scan_result_path']:
             with open(scan_response['scan_result_path'], encoding='utf8') as f:
                 scan_results = json.load(f)
@@ -307,7 +308,7 @@ def mask_secrets(file_path=None, directory_path=None, recursive=False,
                 content = _mask_secret_for_string(content, secret, redaction_type)
             with open(scan_file_path, 'w', encoding='utf8') as f:
                 f.write(content)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-exception-caught
             if continue_on_failure:
                 logger.warning("Error handling file %s, exception %s", scan_file_path, str(ex))
             else:
